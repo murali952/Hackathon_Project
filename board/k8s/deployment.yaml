@@ -1,0 +1,7 @@
+selector:
+  matchLabels:
+    app: train-ticket
+template:
+  metadata:
+    labels:
+      app: train-ticket

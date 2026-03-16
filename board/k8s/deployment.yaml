@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hackathon-app
-  labels:
-    app: hackathon-app
 spec:
   replicas: 2
   selector:
@@ -17,6 +15,5 @@ spec:
       containers:
       - name: hackathon-app
         image: 362324310698.dkr.ecr.us-east-1.amazonaws.com/hackathon-app:latest
-        imagePullPolicy: Always
         ports:
         - containerPort: 8080

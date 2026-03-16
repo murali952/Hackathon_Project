@@ -1,4 +1,4 @@
-name: Build, Scan and Deploy train-ticket-reservation
+name: Build, Scan and Deploy board
 
 on:
   push:

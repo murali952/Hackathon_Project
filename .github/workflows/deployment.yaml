@@ -1,4 +1,4 @@
-name: Build, Scan and Deploy train-ticket-reservation
+name: Build Scan and Deploy CloudShield
 
 on:
   push:
@@ -10,6 +10,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
 
 jobs:
   build:
@@ -17,63 +18,94 @@ jobs:
 
     steps:
 
-      - name: 📥 Checkout code
-        uses: actions/checkout@v5
+    # -----------------------------
+    # Checkout Code
+    # -----------------------------
+    - name: Checkout repository
+      uses: actions/checkout@v5
 
-      - name: ☕ Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    # -----------------------------
+    # Setup Java
+    # -----------------------------
+    - name: Setup Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 17
 
-      - name: 🔨 Build with Maven
-        run: mvn clean package -DskipTests
+    # -----------------------------
+    # Build Maven Project
+    # -----------------------------
+    - name: Build Application
+      working-directory: board
+      run: ./mvnw clean package -DskipTests
 
-      # ---------------------------
-      # SonarQube Scan
-      # ---------------------------
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    # -----------------------------
+    # SonarQube Code Scan
+    # -----------------------------
+    - name: SonarQube Scan
+      working-directory: board
+      uses: sonarsource/sonarqube-scan-action@v2
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # ---------------------------
-      # Configure AWS
-      # ---------------------------
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+    # -----------------------------
+    # Configure AWS
+    # -----------------------------
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      # ---------------------------
-      # Login to ECR
-      # ---------------------------
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+    # -----------------------------
+    # Login to ECR
+    # -----------------------------
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
 
-      # ---------------------------
-      # Build Docker Image
-      # ---------------------------
-      - name: Build Docker Image
-        run: |
-          IMAGE_TAG=$(date +%s)
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+    # -----------------------------
+    # Build Docker Image
+    # -----------------------------
+    - name: Build Docker Image
+      run: |
+        IMAGE_TAG=$(date +%s)
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+        docker build -t $ECR_REPOSITORY:$IMAGE_TAG ./board
 
-      # ---------------------------
-      # Tag Docker Image
-      # ---------------------------
-      - name: Tag Docker Image
-        run: |
-          docker tag $ECR_REPOSITORY:${{ env.IMAGE_TAG }} \
-          $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ env.IMAGE_TAG }}
+    # -----------------------------
+    # Install Trivy
+    # -----------------------------
+    - name: Install Trivy
+      run: |
+        sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install trivy -y
 
-      # ---------------------------
-      # Push Image to ECR
-      # ---------------------------
-      - name: Push to ECR
-        run: |
-          docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ env.IMAGE_TAG }}
+    # -----------------------------
+    # Scan Docker Image
+    # -----------------------------
+    - name: Scan Docker Image
+      run: |
+        trivy image --exit-code 0 --severity HIGH,CRITICAL $ECR_REPOSITORY:${{ env.IMAGE_TAG }}
+
+    # -----------------------------
+    # Tag Image for ECR
+    # -----------------------------
+    - name: Tag Docker Image
+      run: |
+        docker tag $ECR_REPOSITORY:${{ env.IMAGE_TAG }} \
+        $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ env.IMAGE_TAG }}
+
+    # -----------------------------
+    # Push Image to ECR
+    # -----------------------------
+    - name: Push Image to ECR
+      run: |
+        docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ env.IMAGE_TAG }}
+
+   

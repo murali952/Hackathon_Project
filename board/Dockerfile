@@ -1,20 +1,19 @@
-# Use official Node.js image
-FROM node:18-alpine
+# Build Stage
+FROM maven:3.9.9-eclipse-temurin-17 AS build
 
-# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+COPY . .
 
-# Install dependencies
-RUN npm install
+RUN mvn clean package -DskipTests
 
-# Copy application source code
-COPY target/database_service_project-*.jar app.jar
+# Runtime Stage
+FROM eclipse-temurin:17-jdk-alpine
 
-# Expose application port
-EXPOSE 3000
+WORKDIR /app
 
-# Start the application
-CMD ["npm", "start"]
+COPY --from=build /app/target/*.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","-jar","app.jar"]

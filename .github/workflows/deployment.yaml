@@ -33,13 +33,13 @@ jobs:
         chmod +x mvnw
         ./mvnw clean package -DskipTests
 
-    - name: SonarQube Scan
-      uses: sonarsource/sonarqube-scan-action@v2
-      with:
-        projectBaseDir: board
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    - name: SonarQube Scan (Maven)
+      working-directory: board
+      run: |
+        ./mvnw clean verify sonar:sonar \
+        -Dsonar.projectKey=Boardgame \
+        -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+        -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4

@@ -37,7 +37,7 @@ jobs:
       working-directory: board
       run: |
         ./mvnw clean verify sonar:sonar \
-        -Dsonar.projectKey=Boardgame \
+        -Dsonar.projectKey=hackathon-app \
         -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
         -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 

@@ -54,14 +54,15 @@ jobs:
     - name: Debug Env
       run: |
         echo "ECR_REPOSITORY=$ECR_REPOSITORY"
- 
+
     - name: Build Docker Image
       run: |
         IMAGE_TAG=${{ github.sha }}
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-        docker buildx build --platform linux/amd64 -t $ECR_REPOSITORY:$IMAGE_TAG -f board/Dockerfile board --load
-
+        docker build -t $ECR_REPOSITORY:$IMAGE_TAG -f board/Dockerfile board
+ 
+  
     - name: Install Trivy
       run: |
         sudo apt-get update

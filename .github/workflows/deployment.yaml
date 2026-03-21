@@ -50,17 +50,16 @@ jobs:
 
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
-      
-    - name: Debug Env
+    - name: Disable buildx (force normal docker)
       run: |
-        echo "ECR_REPOSITORY=$ECR_REPOSITORY"
-
+        docker buildx uninstall || true
     - name: Build Docker Image
       run: |
         IMAGE_TAG=${{ github.sha }}
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
         docker build -t $ECR_REPOSITORY:$IMAGE_TAG -f board/Dockerfile board
+    
  
   
     - name: Install Trivy

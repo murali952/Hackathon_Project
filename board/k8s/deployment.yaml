@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: hackathon-app
-        image: 736722722555.dkr.ecr.ap-south-1.amazonaws.com/hackathon-app:bc138bab1a72505bb5f77027e532c461ea6c86c
+        image: 736722722555.dkr.ecr.ap-south-1.amazonaws.com/hackathon-app:4721b504d0b72402ea15bf7b2a12c6dffe3fc824
         ports:
         - containerPort: 8080
